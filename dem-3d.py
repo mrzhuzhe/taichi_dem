@@ -39,7 +39,7 @@ print(f"Grid size: {grid_n}x{grid_n}")
 grain_r_min = 0.002
 grain_r_max = 0.003
 """
-grain_r = 0.005
+grain_r = 0.002
 assert grain_r * 2 < grid_size
 
 region_height = n / 10
@@ -60,7 +60,7 @@ def init():
         #pos = vec(l // region_width * grid_size, h * grid_size * 2, l % region_width + padding + grid_size * ti.random() * 0.2)
 
         #  all random 
-        pos = vec(ti.random() * 0.3,  ti.random() * 0.3, ti.random() * 0.3)
+        pos = vec(ti.random() * 1,  ti.random() * 1, ti.random() * 1)
 
         gf[i].p = pos
         #gf[i].r = ti.random() * (grain_r_max - grain_r_min) + grain_r_min
@@ -75,6 +75,7 @@ def update():
         gf[i].v += (gf[i].a + a) * dt / 2.0
         gf[i].p += gf[i].v * dt + 0.5 * a * dt**2
         gf[i].a = a
+        gf[i].v *= 0.1
 
 square_width = 1 
 @ti.kernel
@@ -148,9 +149,14 @@ def contact(gf: ti.template()):
     Handle the collision between grains.
     '''
     for i in gf:
-        gf[i].f = vec(0., gravity * gf[i].m, 0)  # Apply gravity.
-        #if 
-
+        #gf[i].f = vec(0., gravity * gf[i].m, 0)  # Apply gravity.
+        _toCenter = gf[i].p - vec(0.5, 0.5, 0.5)  
+        _rotateforce  = vec(_toCenter[2], 0, -_toCenter[0]) 
+        if _toCenter.norm() >= 0.3:            
+            #gf[i].f += -_toCenter.normalized() * gf[i].m * 100
+            gf[i].f += -_toCenter * gf[i].m * 1000
+        gf[i].f += _rotateforce * gf[i].m * 10
+    
     grain_count.fill(0)
 
     for i in range(n):
@@ -168,7 +174,8 @@ def contact(gf: ti.template()):
        _column_sum_cur[i,j] = prefix_sum[i, j, 0] = ti.atomic_add(_prefix_sum_cur, column_sum[i, j])
         #prefix_sum[i, j, 0] = ti.atomic_add(_prefix_sum_cur, column_sum[i, j])
     
-    """
+    #"""
+    # some references about atomic operation in c++ https://www.youtube.com/watch?v=ZQFzMfHIxng
     # case 1 ok
     for i, j in ti.ndrange(grid_n, grid_n):
         #print(i, j ,k)
@@ -180,10 +187,10 @@ def contact(gf: ti.template()):
             list_cur[linear_idx] = list_head[linear_idx]
             list_tail[linear_idx] = _column_sum_cur[i,j]
 
-    """
+    #"""
     
 
-    #"""
+    """
     # case 2 wrong
     for i, j, k in ti.ndrange(grid_n, grid_n, grid_n):
         #print(i, j ,k)        
@@ -196,7 +203,7 @@ def contact(gf: ti.template()):
         list_tail[linear_idx] = _column_sum_cur[i,j]
 
     # e
-    #"""
+    """
     
     for i in range(n):
         grid_idx = ti.floor(gf[i].p * grid_n, int)
