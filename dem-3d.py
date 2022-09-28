@@ -9,7 +9,7 @@ vec = ti.math.vec3
 SAVE_FRAMES = False
 
 window_size = 1024  # Number of pixels of the window
-n = 9000  # Number of grains
+n = 9000 * 3  # Number of grains
 
 density = 100.0
 stiffness = 8e3
@@ -75,7 +75,7 @@ def update():
         gf[i].v += (gf[i].a + a) * dt / 2.0
         gf[i].p += gf[i].v * dt + 0.5 * a * dt**2
         gf[i].a = a
-        gf[i].v *= 0.999
+        gf[i].v *= 0.995
 
 square_width = 1 
 @ti.kernel
@@ -150,12 +150,11 @@ def contact(gf: ti.template(), step: float):
     '''
     for i in gf:
         gf[i].f = vec(0., gravity * gf[i].m, 0)  # Apply gravity.
-        _toCenter = gf[i].p - vec(0.5, 0.5, 0.5)  
-        _rotateforce  = vec(_toCenter[2], 0, -_toCenter[0]) 
-        #if _toCenter.norm() >= 0.3:            
-            #gf[i].f += -_toCenter.normalized() * gf[i].m * 100
-            #gf[i].f += -_toCenter * gf[i].m * 10
-        gf[i].f += _rotateforce * gf[i].m  * 10 * ti.sin(step / 100)
+        _toCenter = gf[i].p - vec(0.5, 0.5 + step * 0.0001, 0.5)  
+        _rotateforce  = vec(_toCenter[2], -gravity  * gf[i].p[1], -_toCenter[0]).normalized() 
+        if _toCenter.norm() >= 0.3:            
+            gf[i].f += -_toCenter.normalized() * gf[i].m 
+        gf[i].f += _rotateforce * gf[i].m  * 10
     
     grain_count.fill(0)
 
