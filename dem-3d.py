@@ -75,7 +75,7 @@ def update():
         gf[i].v += (gf[i].a + a) * dt / 2.0
         gf[i].p += gf[i].v * dt + 0.5 * a * dt**2
         gf[i].a = a
-        gf[i].v *= 0.1
+        gf[i].v *= 0.999
 
 square_width = 1 
 @ti.kernel
@@ -126,8 +126,8 @@ def resolve(i, j):
                   ) * ti.sqrt(K * M)
         V = (gf[j].v - gf[i].v) * normal
         f2 = C * V * normal
-        gf[i].f += f2 - f1
-        gf[j].f -= f2 - f1
+        gf[i].f += f2 - f1 
+        gf[j].f -= f2 - f1 
 
 
 list_head = ti.field(dtype=ti.i32, shape=grid_n * grid_n * grid_n)
@@ -144,18 +144,18 @@ particle_id = ti.field(dtype=ti.i32, shape=n, name="particle_id")
 _column_sum_cur = ti.field(dtype=ti.i32, shape=(grid_n, grid_n))
 
 @ti.kernel
-def contact(gf: ti.template()):
+def contact(gf: ti.template(), step: float):
     '''
     Handle the collision between grains.
     '''
     for i in gf:
-        #gf[i].f = vec(0., gravity * gf[i].m, 0)  # Apply gravity.
+        gf[i].f = vec(0., gravity * gf[i].m, 0)  # Apply gravity.
         _toCenter = gf[i].p - vec(0.5, 0.5, 0.5)  
         _rotateforce  = vec(_toCenter[2], 0, -_toCenter[0]) 
-        if _toCenter.norm() >= 0.3:            
+        #if _toCenter.norm() >= 0.3:            
             #gf[i].f += -_toCenter.normalized() * gf[i].m * 100
-            gf[i].f += -_toCenter * gf[i].m * 1000
-        gf[i].f += _rotateforce * gf[i].m * 10
+            #gf[i].f += -_toCenter * gf[i].m * 10
+        gf[i].f += _rotateforce * gf[i].m  * 10 * ti.sin(step / 100)
     
     grain_count.fill(0)
 
@@ -248,15 +248,14 @@ scene.set_camera(camera)
 
 canvas = window.get_canvas()
 
-step = 0
+step = 0.0
 movement_speed = 0.001
 
 while window.running:
- 
     for s in range(substeps):
         update()
         apply_bc()
-        contact(gf)    
+        contact(gf, step)    
     
     camera.track_user_inputs(window, movement_speed=movement_speed, hold_key=ti.ui.LMB)
     scene.set_camera(camera)
