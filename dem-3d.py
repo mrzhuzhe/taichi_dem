@@ -153,7 +153,7 @@ def contact(gf: ti.template(), step: float):
         _toCenter = gf[i].p - vec(0.5, 0.5 + step * 0.0001, 0.5)  
         _rotateforce  = vec(_toCenter[2], -gravity  * gf[i].p[1], -_toCenter[0]).normalized() 
         if _toCenter.norm() >= 0.3:            
-            gf[i].f += -_toCenter.normalized() * gf[i].m 
+            gf[i].f += -_toCenter.normalized() * gf[i].m * 10
         gf[i].f += _rotateforce * gf[i].m  * 10
     
     grain_count.fill(0)
