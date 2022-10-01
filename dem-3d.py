@@ -1,4 +1,3 @@
-from pyparsing import White
 import taichi as ti
 import math
 import os
@@ -9,7 +8,7 @@ vec = ti.math.vec3
 SAVE_FRAMES = False
 
 window_size = 1024  # Number of pixels of the window
-n = 9000   # Number of grains
+n = 9000  # Number of grains
 
 density = 100.0
 stiffness = 8e3
@@ -39,7 +38,7 @@ print(f"Grid size: {grid_n}x{grid_n}")
 grain_r_min = 0.002
 grain_r_max = 0.003
 """
-grain_r = 0.005
+grain_r = 0.003
 assert grain_r * 2 < grid_size
 
 region_height = n / 10
@@ -60,7 +59,7 @@ def init():
         #pos = vec(l // region_width * grid_size, h * grid_size * 2, l % region_width + padding + grid_size * ti.random() * 0.2)
 
         #  all random 
-        pos = vec(0 + ti.random() * 1,  ti.random() * 1, ti.random() * 1)
+        pos = vec(0 + ti.random() * 1,  ti.random() * 0.3, ti.random() * 1)
 
         gf[i].p = pos
         #gf[i].r = ti.random() * (grain_r_max - grain_r_min) + grain_r_min
@@ -142,14 +141,27 @@ particle_id = ti.field(dtype=ti.i32, shape=n, name="particle_id")
 
 
 @ti.kernel
-def contact(gf: ti.template()):
+def contact(gf: ti.template(), step: int):
     '''
     Handle the collision between grains.
     '''
     for i in gf:
         gf[i].f = vec(0., gravity * gf[i].m, 0)  # Apply gravity.
-        #if 
-
+        #"""
+        # tougong
+        _toCenter = gf[i].p - vec(0.5, 0.5, 0.5)          
+        _norm = _toCenter.norm()          
+        
+        if step > 500:
+            if _norm < 0.1:
+                gf[i].f += _toCenter.normalized() * (1 - _norm) * gf[i].m * 1000
+                
+        else: 
+            _rotateforce  = vec(_toCenter[2], 0, -_toCenter[0]).normalized() 
+            gf[i].f += -_toCenter.normalized() * (1 - _norm) * gf[i].m * 50
+            gf[i].f += _rotateforce * (0.5 - abs(0.5 - gf[i].p[1])) * gf[i].m * 5
+        #"""
+        
     grain_count.fill(0)
 
     for i in range(n):
@@ -214,19 +226,26 @@ def contact(gf: ti.template()):
         y_end = min(grid_idx[1] + 2, grid_n)
 
         z_begin = max(grid_idx[2] - 1, 0)
-        z_end = min(grid_idx[2] + 2, grid_n)
+        
+        # only need one side 
+        z_end = min(grid_idx[2] + 1, grid_n)
+        
         # todo still serialize
         for neigh_i, neigh_j, neigh_k in ti.ndrange((x_begin,x_end),(y_begin,y_end),(z_begin,z_end)):
-            # still need improve
-            if ((neigh_i + neigh_j + neigh_k) > (grid_idx[0] + grid_idx[1] + grid_idx[2]) and neigh_i <=  grid_idx[0]): 
+            
+            # on split plane 
+            if neigh_k == grid_idx[2] and (neigh_i + neigh_j) > (grid_idx[0] + grid_idx[1]) and neigh_i <=  grid_idx[0]: 
                 continue
+            # same grid
+            iscur = neigh_i == grid_idx[0] and neigh_j == grid_idx[1] and neigh_k == grid_idx[2]
+
             neigh_linear_idx = neigh_i * grid_n * grid_n + neigh_j * grid_n + neigh_k
             for p_idx in range(list_head[neigh_linear_idx],
                             list_tail[neigh_linear_idx]):
                 j = particle_id[p_idx]
-                # if grid is neg shall i < j
-                if i != j:
-                    resolve(i, j)
+                if iscur and i >= j:
+                    continue                
+                resolve(i, j)
 
 
 init()
@@ -234,11 +253,11 @@ init()
 window = ti.ui.Window('DEM', (window_size, window_size), show_window = True, vsync=False)
 scene = ti.ui.Scene()
 camera = ti.ui.Camera()
-camera.position(1.25, 0.5, 1.25)
+camera.position(1, 0.75, 1)
 #camera.position(0.5, 0.5, 0.5)
 
 camera.up(0.0, 0.5, 0.0)
-camera.lookat(-0.5, 0.0, 0.0)
+camera.lookat(0.0, 0.0, 0.0)
 camera.fov(70)
 scene.set_camera(camera)
 
@@ -252,17 +271,28 @@ while window.running:
     for s in range(substeps):
         update()
         apply_bc()
-        contact(gf)    
+        contact(gf, step)    
     
     camera.track_user_inputs(window, movement_speed=movement_speed, hold_key=ti.ui.LMB)
     scene.set_camera(camera)
 
-    scene.point_light((5.0, 5.0, 5.0), color=(5.0, 5.0, 5.0))
+    scene.point_light((5.0, 5.0, 5.0), color=(5.0, 5.0, 1.0))
 
     pos = gf.p
 
     scene.particles(pos, radius=grain_r)
 
+    if step > 600:
+        break
     canvas.scene(scene)
+
+
+    if step % 5 == 0:
+        window.save_image(f"outputs/{step:06}.png")
+
     window.show()
+
+
     step += 1
+
+    
