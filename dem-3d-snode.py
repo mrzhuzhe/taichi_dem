@@ -54,15 +54,10 @@ def init():
         sq = i % region_height
         l = sq * grid_size       
         
-        # sorted array
-        #pos = vec(l // region_width * grid_size, h * grid_size * 2, l % region_width + padding)
-        #pos = vec(l // region_width * grid_size, h * grid_size * 2, l % region_width + padding + grid_size * ti.random() * 0.2)
-
         #  all random 
         pos = vec(0 + ti.random() * 1,  ti.random() * 0.3, ti.random() * 1)
 
         gf[i].p = pos
-        #gf[i].r = ti.random() * (grain_r_max - grain_r_min) + grain_r_min
         gf[i].r = grain_r
         gf[i].m = density * math.pi * gf[i].r**2
 
@@ -127,17 +122,14 @@ def resolve(i, j):
         gf[i].f += f2 - f1
         gf[j].f -= f2 - f1
 
+# only 35fps on 3090
+grid_particles_list = ti.field(ti.i32)
+grid_block = ti.root.dense(ti.ijk, (grid_n, grid_n, grid_n))
+partical_array = grid_block.dynamic(ti.l, n)
+partical_array.place(grid_particles_list)
 
-list_head = ti.field(dtype=ti.i32, shape=grid_n * grid_n * grid_n)
-list_cur = ti.field(dtype=ti.i32, shape=grid_n * grid_n * grid_n)
-list_tail = ti.field(dtype=ti.i32, shape=grid_n * grid_n * grid_n)
-
-grain_count = ti.field(dtype=ti.i32,
-                       shape=(grid_n, grid_n, grid_n),
-                       name="grain_count")
-column_sum = ti.field(dtype=ti.i32, shape=(grid_n, grid_n), name="column_sum")
-prefix_sum = ti.field(dtype=ti.i32, shape=(grid_n, grid_n), name="prefix_sum")
-particle_id = ti.field(dtype=ti.i32, shape=n, name="particle_id")
+grid_particles_count = ti.field(ti.i32)
+ti.root.dense(ti.ijk, (grid_n, grid_n, grid_n)).place(grid_particles_count)
 
 
 @ti.kernel
@@ -161,57 +153,14 @@ def contact(gf: ti.template(), step: int):
             gf[i].f += -_toCenter.normalized() * (1 - _norm) * gf[i].m * 50
             gf[i].f += _rotateforce * (0.5 - abs(0.5 - gf[i].p[1])) * gf[i].m * 5
         #"""
-        
-    grain_count.fill(0)
-
+    
+    grid_particles_count.fill(0)
     for i in range(n):
         grid_idx = ti.floor(gf[i].p * grid_n, int)
-        grain_count[grid_idx] += 1
+        #print(grid_idx, grid_particles_count[grid_idx])
+        ti.append(grid_particles_list.parent(), grid_idx, int(i))
+        ti.atomic_add(grid_particles_count[grid_idx], 1)
     
-    column_sum.fill(0)
-    # kernel comunicate with global variable ???? this is a bit amazing 
-    for i, j, k in ti.ndrange(grid_n, grid_n, grid_n):        
-        ti.atomic_add(column_sum[i, j], grain_count[i, j, k])
-
-    # this is because memory mapping can be out of order
-    _prefix_sum_cur = 0
-    
-    for i, j in ti.ndrange(grid_n, grid_n):
-        prefix_sum[i, j] = ti.atomic_add(_prefix_sum_cur, column_sum[i, j])
-    
-        
-    """
-    # case 1 wrong
-    for i, j, k in ti.ndrange(grid_n, grid_n, grid_n):
-        #print(i, j ,k)        
-        ti.atomic_add(prefix_sum[i,j], grain_count[i, j, k])    
-        linear_idx = i * grid_n * grid_n + j * grid_n + k
-        list_head[linear_idx] = prefix_sum[i,j]- grain_count[i, j, k]
-        list_cur[linear_idx] = list_head[linear_idx]
-        list_tail[linear_idx] = prefix_sum[i,j]
-
-    """
-    
-    #"""
-    # case 2 test okay
-    for i, j, k in ti.ndrange(grid_n, grid_n, grid_n):        
-        # we cannot visit prefix_sum[i,j] in this loop
-        pre = ti.atomic_add(prefix_sum[i,j], grain_count[i, j, k])        
-        linear_idx = i * grid_n * grid_n + j * grid_n + k
-        list_head[linear_idx] = pre
-        list_cur[linear_idx] = list_head[linear_idx]
-        # only pre pointer is useable
-        list_tail[linear_idx] = pre + grain_count[i, j, k]       
-    #"""        
-    # e
-
-    for i in range(n):
-        grid_idx = ti.floor(gf[i].p * grid_n, int)
-        linear_idx = grid_idx[0] * grid_n * grid_n + grid_idx[1] * grid_n + grid_idx[2]
-        grain_location = ti.atomic_add(list_cur[linear_idx], 1)
-        particle_id[grain_location] = i
-
-
     # Fast collision detection
     for i in range(n):
         grid_idx = ti.floor(gf[i].p * grid_n, int)
@@ -234,16 +183,15 @@ def contact(gf: ti.template(), step: int):
                 continue
             # same grid
             iscur = neigh_i == grid_idx[0] and neigh_j == grid_idx[1] and neigh_k == grid_idx[2]
+            for l in range(grid_particles_count[neigh_i, neigh_j, neigh_k]):
+                j = grid_particles_list[neigh_i, neigh_j, neigh_k, l]
 
-            neigh_linear_idx = neigh_i * grid_n * grid_n + neigh_j * grid_n + neigh_k
-            for p_idx in range(list_head[neigh_linear_idx],
-                            list_tail[neigh_linear_idx]):
-                j = particle_id[p_idx]
                 if iscur and i >= j:
                     continue                
                 resolve(i, j)
-
-
+            
+            
+            
 init()
 
 window = ti.ui.Window('DEM', (window_size, window_size), show_window = True, vsync=False)
@@ -267,6 +215,8 @@ while window.running:
     for s in range(substeps):
         update()
         apply_bc()
+        #partical_array.deactivate_all()
+        ti.deactivate_all_snodes()
         contact(gf, step)    
     
     camera.track_user_inputs(window, movement_speed=movement_speed, hold_key=ti.ui.LMB)
