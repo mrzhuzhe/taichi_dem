@@ -2,7 +2,7 @@
 
 > 《偷功》 is a song in old HongKong film composed by 胡伟立
 
-Every childhood want to use their bare hand to make a cyclone ball in washer after watching this film 
+Everybody in childhood want to use their bare hand to make a cyclone ball in their household washer after watching this film 
 
 ---
 
