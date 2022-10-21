@@ -1,14 +1,21 @@
-# Taichi DEM
-A minimal DEM simulation demo written in Taichi.
+# Tougong
 
+> 《偷功》 is a song in old HongKong film composed by 胡伟立
 
+Mimnal Dem version
 <img src="https://github.com/mrzhuzhe/taichi_dem/blob/main/gifs/v01.gif" height="270px">
 
 PBF version
 
 <img src="https://github.com/mrzhuzhe/taichi_dem/blob/main/gifs/pbf-v01.gif" height="270px">
 
-> To implement your own version, click the "Use this template" button on this page and simply modify the `dem.py` script.
+
+## Run 
+```
+python3 dem-3d.py  # Yellow dem cyclone
+python3 pbf.py # Blue position based fluid cyclone
+python3 dem-3d-snode.py  # YelloW dem cyclone , for comparing, implement by taichi dynamic snode features 
+```
 
 ## Installation
 Make sure your `pip` is up-to-date:
@@ -29,28 +36,17 @@ To run the demo:
 $ python dem.py
 ```
 
-## Assumptions
-The `dem.py` implements a minimal DEM solver with the following assumptions:
 
-- All paricles are round circles with variable radius.
-- Only the normal force between particles is considered - the tangential force is not included.
-- The deformation of the particles is not included.
-- Ignore the angular momentum of the particle and only consider the translation of the particle.
+## References 
 
-## Open missions
-There are plenty of room for hacking! We suggest a few of them for you to start with:
-- Reduce the neighborhood search region from the 3x3 grid cells to only 5 grid cells
-- Support more particle geometries
-- Implement angular momentum of the particles
-- Include tangential forces
-- ...
+1. Position based fluid is implement based on 
 
-## Show your work!
-We encourage you to continue developing on this repo and share your work with our community members. To notify us about your work, make sure you use this repo as a template.
+    Ten minutes physics https://matthias-research.github.io/pages/tenMinutePhysics/
+    
+    https://github.com/matthias-research/pages/blob/master/challenges/fluid2d.html
 
+2. Taichi structured data organization Document 
 
-# Reference
-
-https://zhuanlan.zhihu.com/p/563182093
-
-https://forum.taichi.graphics/t/topic/2975/2
+    Snodes https://docs.taichi-lang.org/docs/internal#data-structure-organization
+    
+    Dynamic snode https://docs.taichi-lang.org/docs/sparse#dynamic-snode
