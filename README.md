@@ -3,6 +3,7 @@
 > 《偷功》 is a song in old HongKong film composed by 胡伟立
 
 Mimnal Dem version
+
 <img src="https://github.com/mrzhuzhe/taichi_dem/blob/main/gifs/v01.gif" height="270px">
 
 PBF version
@@ -13,7 +14,9 @@ PBF version
 ## Run 
 ```
 python3 dem-3d.py  # Yellow dem cyclone
+
 python3 pbf.py # Blue position based fluid cyclone
+
 python3 dem-3d-snode.py  # YelloW dem cyclone , for comparing, implement by taichi dynamic snode features 
 ```
 
