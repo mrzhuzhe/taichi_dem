@@ -12,7 +12,7 @@ PBF version
 
 
 
-## Origianl Discussion
+## Original Discussion
 
 For futher imformation please reffer to this post : https://forum.taichi-lang.cn/t/topic/2975/16?u=mrzhuzhe
 
