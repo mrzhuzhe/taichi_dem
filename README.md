@@ -11,6 +11,13 @@ PBF version
 <img src="https://github.com/mrzhuzhe/taichi_dem/blob/main/gifs/pbf-v01.gif" height="270px">
 
 
+
+## Origianl Discussion
+
+For futher imformation please reffer to this post : https://forum.taichi-lang.cn/t/topic/2975/16?u=mrzhuzhe
+
+
+
 ## Run 
 ```
 python3 dem-3d.py  # Yellow dem cyclone
