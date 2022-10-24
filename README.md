@@ -26,7 +26,7 @@ For futher imformation please reffer to this post : https://forum.taichi-lang.cn
 
 ## Run 
 ```
-python3 dem-3d.py  # Yellow dem cyclone
+python3 dem.py  # Yellow dem cyclone
 
 python3 pbf.py # Blue position based fluid cyclone
 
@@ -45,13 +45,6 @@ Assume you have a Python 3 environment, to install Taichi:
 ```bash
 $ pip3 install -U taichi
 ```
-
-To run the demo:
-
-```bash
-$ python dem.py
-```
-
 
 ## References 
 
