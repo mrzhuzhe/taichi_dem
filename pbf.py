@@ -241,6 +241,7 @@ def update(step: int):
     for i in range(n):
         deltaV = pos[i] - prepos[i]
 
+        applyViscosity(i, sdt)
         # CFL
         _Vnorm = deltaV.norm()
         if _Vnorm > maxVel:
@@ -249,10 +250,10 @@ def update(step: int):
     
         vel[i] = deltaV / sdt
         
-        applyViscosity(i, sdt)
+        
 
-win_x = 640
-win_y = 640
+win_x = 1024
+win_y = 1024
 
 window = ti.ui.Window("pbf 3d", 
 (win_x, win_y), vsync=True
@@ -285,8 +286,8 @@ while window.running:
     if step % 5 == 0 and SAVE_FRAMES:
         window.save_image(f"outputs/{step:06}.png")
 
-    if step > 600:
-        break
+    #if step > 600:
+    #    break
     
     window.show()
 
